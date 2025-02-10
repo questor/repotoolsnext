@@ -2,11 +2,17 @@ import json
 import argparse
 import subprocess
 import os
+import sys
 
 def runProcess(cmd):
     result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     if(result.returncode != 0):
         print(("CMD FAILED: %s") % cmd)
+        if sys.platform == 'win32':
+            ret = result.stdout.decode('cp1252')
+        else:
+            ret = result.stdout.decode('UTF-8')
+        print(ret)
     return result
 
 def checkDirectory(path):
@@ -87,6 +93,10 @@ def main():
 
         else:
             if args.verbose:
+                print("create destination directory structure")
+            os.makedirs(repo["directory"], exist_ok=True)
+
+            if args.verbose:
                 print("clone "+repo["sourceurl"]+" to "+repo["directory"])
 
             cmd = []
@@ -95,11 +105,13 @@ def main():
             cmd.append("--depth 1")
             cmd.append(repo["sourceurl"])
             cmd.append(repo["directory"])
+            runProcess(cmd)
 
         repoCounter += 1
-        if args.debug:
-            print("DEBUG MODE, abort after 3 repos")
-            os.exit(0)
+        if repoCounter >= 3:
+            if args.debug:
+                print("DEBUG MODE, abort after 3 repos")
+                exit(0)
 
 
 
