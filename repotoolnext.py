@@ -5,14 +5,11 @@ import os
 import sys
 
 def runProcess(cmd):
-    result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    if(result.returncode != 0):
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    if result.returncode != 0:
         print(("CMD FAILED: %s") % cmd)
-        if sys.platform == 'win32':
-            ret = result.stdout.decode('cp1252')
-        else:
-            ret = result.stdout.decode('UTF-8')
-        print(ret)
+        print(result.stdout)
+        print(result.stderr)
     return result
 
 def checkDirectory(path):
@@ -60,34 +57,41 @@ def main():
             os.chdir(repo["directory"])
             if args.verbose:
                 print("change to "+repo["directory"]+" and fetch")
+                print("current directory:"+os.getcwd())
 
             cmd = []
             cmd.append("git")
             cmd.append("fetch")
-            cmd.append("--depth 1")
+            cmd.append("--depth")
+            cmd.append("1")
             runProcess(cmd)
             
             cmd = []
-            cmd.append("git rev-parse --abbrev-ref --symbolic-full-name '@{u}'")
+            cmd.append("git")
+            cmd.append("rev-parse")
+            cmd.append("--abbrev-ref")
+            cmd.append("--symbolic-full-name")
+            cmd.append("@{u}")
             branch = runProcess(cmd)
 
-            if args.verbose:
-                print("reset to branch "+branch)
+            if branch.returncode != 0:
+                if args.verbose:
+                    print("reset to branch "+branch.stdout)
 
-            cmd = []
-            cmd.append("git")
-            cmd.append("reset")
-            cmd.append("--hard")
-            cmd.append(branch)
-            runProcess(cmd)
+                cmd = []
+                cmd.append("git")
+                cmd.append("reset")
+                cmd.append("--hard")
+                cmd.append(branch.stdout)
+                runProcess(cmd)
 
-            if args.verbose:
-                print("clean")
-            cmd = []
-            cmd.append("git")
-            cmd.append("clean")
-            cmd.append("-dfx")
-            runProcess(cmd)
+                if args.verbose:
+                    print("clean")
+                cmd = []
+                cmd.append("git")
+                cmd.append("clean")
+                cmd.append("-dfx")
+                runProcess(cmd)
             
             os.chdir(originalWorkingDirectory)
 
@@ -102,7 +106,8 @@ def main():
             cmd = []
             cmd.append("git")
             cmd.append("clone")
-            cmd.append("--depth 1")
+            cmd.append("--depth")
+            cmd.append("1")
             cmd.append(repo["sourceurl"])
             cmd.append(repo["directory"])
             runProcess(cmd)
