@@ -33,6 +33,8 @@ def main():
     parser.add_argument('-d', '--debug', action='store_true', help='only process the first 3 repos in the list for debugging purposes')
     parser.add_argument('-l', '--list', action='store_true', help='list all repos, but do nothing')
 
+    parser.add_argument('-s', '--scan', action='store_true', help='scan for github repos not found in the repo json')
+
     args = parser.parse_args()
 
     with open(args.repo_list_json, 'r', encoding='utf-8') as f:
@@ -43,11 +45,44 @@ def main():
     if args.verbose:
         print("Verbose mode enabled!")
 
-    originalWorkingDirectory = os.getcwd()
+    originalWorkingDirectory = os.getcwd() + os.sep     # always with an "/" at the end
 
     if args.list:
         for repo in repos:
             print(repo["sourceurl"]+" : "+repo["directory"])
+        exit(0)
+
+    if args.scan:
+        for subdir, dirs, files in os.walk(originalWorkingDirectory):
+            for dir in dirs:
+                if dir == ".git":
+                    completePath = subdir + os.sep + dir
+                    localPath = completePath[len(originalWorkingDirectory):]
+                    localPath = localPath[:len(localPath)-len("/.git")]
+
+                    if len(localPath) > 0:      # skip local directory!
+                        if args.verbose:
+                            print("check if directory is already in list")
+
+                        print(repos)
+
+                        if args.verbose:
+                            print("change to path :"+completePath[:len(completePath)-len("/.git")])
+                        os.chdir(completePath[:len(completePath)-len("/.git")])
+
+                        cmd = []
+                        cmd.append("git")
+                        cmd.append("config")
+                        cmd.append("--get")
+                        cmd.append("remote.origin.url")
+                        sourceUrl = runProcess(cmd)
+                        if sourceUrl.returncode == 0:
+
+                            print(subdir + os.sep + dir + " : " + localPath +" : "+sourceUrl.stdout)
+                        else:
+                            print("could not find source url for repo : "+localPath)
+                            print("errorcode:"+str(sourceUrl.returncode))
+                            print("error:"+sourceUrl.stdout)
         exit(0)
 
     repoCounter = 0
