@@ -53,6 +53,7 @@ def main():
         exit(0)
 
     if args.scan:
+        foundSomethingNew = False
         for subdir, dirs, files in os.walk(originalWorkingDirectory):
             for dir in dirs:
                 if dir == ".git":
@@ -64,25 +65,47 @@ def main():
                         if args.verbose:
                             print("check if directory is already in list")
 
-                        print(repos)
+                        localPath = localPath + os.sep
 
-                        if args.verbose:
-                            print("change to path :"+completePath[:len(completePath)-len("/.git")])
-                        os.chdir(completePath[:len(completePath)-len("/.git")])
+                        alreadyInList = False
+                        for item in repos:
+                            #print(item)
+                            if item['directory'] == localPath:
+                                alreadyInList = True
 
-                        cmd = []
-                        cmd.append("git")
-                        cmd.append("config")
-                        cmd.append("--get")
-                        cmd.append("remote.origin.url")
-                        sourceUrl = runProcess(cmd)
-                        if sourceUrl.returncode == 0:
+                        if alreadyInList == False:
+                            print("NEW REPO: "+localPath)
+                            if args.verbose:
+                                print("change to path :"+completePath[:len(completePath)-len("/.git")])
+                            os.chdir(completePath[:len(completePath)-len("/.git")])
 
-                            print(subdir + os.sep + dir + " : " + localPath +" : "+sourceUrl.stdout)
+                            cmd = []
+                            cmd.append("git")
+                            cmd.append("config")
+                            cmd.append("--get")
+                            cmd.append("remote.origin.url")
+                            sourceUrl = runProcess(cmd)
+                            if sourceUrl.returncode == 0:
+                                newItem = {}
+                                newItem['directory'] = localPath
+                                newItem['sourceurl'] = sourceUrl.stdout.rstrip()    # remove newline in stdout
+                                if args.verbose:
+                                    print("new repo to insert: "+str(newItem))
+                                repos.append(newItem)
+                                foundSomethingNew = True
+                            else:
+                                print("could not find source url for repo : "+localPath)
+                                print("errorcode:"+str(sourceUrl.returncode))
+                                print("error:"+sourceUrl.stdout)
+
                         else:
-                            print("could not find source url for repo : "+localPath)
-                            print("errorcode:"+str(sourceUrl.returncode))
-                            print("error:"+sourceUrl.stdout)
+                            print("already in list: "+localPath)
+
+        os.chdir(originalWorkingDirectory)
+
+        if foundSomethingNew == True:
+            with open(args.repo_list_json, 'w', encoding='utf-8') as f:
+                json.dump(repos, f, ensure_ascii=False, indent=3, sort_keys=True)
         exit(0)
 
     repoCounter = 0
