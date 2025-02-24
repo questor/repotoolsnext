@@ -3,6 +3,7 @@ import argparse
 import subprocess
 import os
 import sys
+import yaml
 
 def runProcess(cmd):
     result = subprocess.run(cmd, capture_output=True, text=True)
@@ -24,16 +25,22 @@ def checkDirectory(path):
 def normalizePath(path):
 	return path.replace("\\", "/")
 
+# https://stackoverflow.com/questions/27433316/how-to-get-argparse-to-read-arguments-from-a-file-with-an-option-rather-than-pre
+class LoadArgsFromFile(argparse.Action):
+    def __call__ (self, parser, namespace, values, option_string = None):
+        with values as f:
+            # parse arguments in the file and store them in the target namespace
+            parser.parse_args(f.read().split(), namespace)
+
 def main():
     parser = argparse.ArgumentParser(description='tool to sync git repos without history')
 
     parser.add_argument('repo_list_json', help="path to repo list json file")
-
     parser.add_argument('-v', '--verbose', action='store_true', help='print verbose output')
     parser.add_argument('-d', '--debug', action='store_true', help='only process the first 3 repos in the list for debugging purposes')
     parser.add_argument('-l', '--list', action='store_true', help='list all repos, but do nothing')
-
     parser.add_argument('-s', '--scan', action='store_true', help='scan for github repos not found in the repo json')
+    parser.add_argument('--config', type=open, action=LoadArgsFromFile)
 
     args = parser.parse_args()
 
