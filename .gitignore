@@ -174,3 +174,6 @@ cython_debug/
 projects/
 github_mirror/
 
+fuchsia/
+UnrealEngine/
+aseprite/
