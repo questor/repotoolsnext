@@ -19,4 +19,4 @@ runRSync "github_mirror/" "$1/github_mirror"
 runRSync "aseprite/" "$1/aseprite"
 
 # the following is expensive....
-#tar -cJvf "$1/fuchsia.tar.xz" "fuchsia/"
+#tar -Ipixz -cvf "$1/fuchsia.tar.xz" "fuchsia/"
