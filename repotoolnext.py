@@ -44,8 +44,14 @@ def main():
 
     args = parser.parse_args()
 
-    with open(args.repo_list_json, 'r', encoding='utf-8') as f:
-        data = f.read()
+    try:
+        f = open(args.repo_list_json, 'r', encoding='utf-8')
+    except FileNotFoundError:
+        print("no json file found, will use empty list")
+        data = "[]"
+    else:
+        with f:
+            data = f.read()
 
     repos = json.loads(data)
 
