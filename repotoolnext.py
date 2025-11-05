@@ -5,6 +5,8 @@ import os
 import sys
 import yaml
 
+from dataclasses import dataclass
+
 def runProcess(cmd):
     result = subprocess.run(cmd, capture_output=True, text=True)
     if result.returncode != 0:
@@ -66,10 +68,26 @@ def main():
         exit(0)
 
     if args.scan:
+        @dataclass
+        class ScanStats:
+            checkedRepos: int = 0
+            newRepos: int = 0
+            alreadyInListRepos: int = 0
+            errors: int = 0
+            def __str__(self):
+                text = f"\n===================\n"
+                text += f"Stats from Scanning:\n"
+                text += f"- checked repos: {self.checkedRepos}\n"
+                text += f"- new repos: {self.newRepos}\n"
+                text += f"- already in list: {self.alreadyInListRepos}\n"
+                text += f"- errors: {self.errors}\n"
+                return text
+        stats = ScanStats()
         foundSomethingNew = False
         for subdir, dirs, files in os.walk(originalWorkingDirectory):
             for dir in dirs:
                 if dir == ".git":
+                    stats.checkedRepos += 1
                     completePath = subdir + os.sep + dir
                     localPath = completePath[len(originalWorkingDirectory):]
                     localPath = localPath[:len(localPath)-len("/.git")]
@@ -84,7 +102,9 @@ def main():
                         for item in repos:
                             #print(item)
                             if item['directory'] == localPath:
+                                print("already in list: "+localPath)
                                 alreadyInList = True
+                                stats.alreadyInListRepos += 1
 
                         if alreadyInList == False:
                             print("NEW REPO: "+localPath)
@@ -106,25 +126,41 @@ def main():
                                     print("new repo to insert: "+str(newItem))
                                 repos.append(newItem)
                                 foundSomethingNew = True
+                                stats.newRepos += 1
                             else:
                                 print("could not find source url for repo : "+localPath)
                                 print("errorcode:"+str(sourceUrl.returncode))
                                 print("error:"+sourceUrl.stdout)
-
-                        else:
-                            print("already in list: "+localPath)
+                                stats.errors += 1
 
         os.chdir(originalWorkingDirectory)
 
         if foundSomethingNew == True:
             with open(args.repo_list_json, 'w', encoding='utf-8') as f:
                 json.dump(repos, f, ensure_ascii=False, indent=3, sort_keys=True)
+        print(stats)
         exit(0)
+
+    @dataclass
+    class UpdateStats:
+        checkedRepos: int = 0
+        errors: int = 0
+        updatedRepos: int = 0
+        createdRepos: int = 0
+        def __str__(self):
+            text = f"\n===================\n"
+            text += f"Stats from Updating:\n"
+            text += f"- checked repos: {self.checkedRepos}\n"
+            text += f"- errors: {self.errors}\n"
+            text += f"- updated repos: {self.updatedRepos}\n"
+            text += f"- created repos: {self.createdRepos}\n"
+            return text
+    stats = UpdateStats()
 
     repoCounter = 0
     for repo in repos:
+        stats.checkedRepos += 1
         if checkDirectory(repo["directory"]) == True:
-            
             os.chdir(repo["directory"])
             if args.verbose:
                 print("change to "+repo["directory"]+" and fetch")
@@ -135,8 +171,10 @@ def main():
             cmd.append("fetch")
             cmd.append("--depth")
             cmd.append("1")
-            runProcess(cmd)
-            
+            res = runProcess(cmd)
+            if res.returncode != 0:
+                stats.errors += 1
+
             cmd = []
             cmd.append("git")
             cmd.append("rev-parse")
@@ -154,7 +192,9 @@ def main():
                 cmd.append("reset")
                 cmd.append("--hard")
                 cmd.append(branch.stdout)
-                runProcess(cmd)
+                res = runProcess(cmd)
+                if res.returncode != 0:
+                    stats.errors += 1
 
                 if args.verbose:
                     print("clean")
@@ -162,10 +202,14 @@ def main():
                 cmd.append("git")
                 cmd.append("clean")
                 cmd.append("-dfx")
-                runProcess(cmd)
-            
-            os.chdir(originalWorkingDirectory)
+                res = runProcess(cmd)
+                if res.returncode != 0:
+                    stats.errors += 1
+            else:
+                stats.errors += 1
 
+            os.chdir(originalWorkingDirectory)
+            stats.updatedRepos += 1
         else:
             if args.verbose:
                 print("create destination directory structure")
@@ -181,23 +225,21 @@ def main():
             cmd.append("1")
             cmd.append(repo["sourceurl"])
             cmd.append(repo["directory"])
-            runProcess(cmd)
+            res = runProcess(cmd)
+            if res.returncode != 0:
+                stats.errors += 1
+            else:
+                stats.createdRepos += 1
 
         repoCounter += 1
         if repoCounter >= 3:
             if args.debug:
                 print("DEBUG MODE, abort after 3 repos")
                 exit(0)
-
-
-
-
-
-
+    print(stats)
 
 if __name__ == "__main__":
     main()
-
 
 # clone by git clone --depth 1 url directory
 
