@@ -173,6 +173,7 @@ def main():
             cmd.append("1")
             res = runProcess(cmd)
             if res.returncode != 0:
+                print("error during git fetch")
                 stats.errors += 1
 
             cmd = []
@@ -183,17 +184,19 @@ def main():
             cmd.append("@{u}")
             branch = runProcess(cmd)
 
-            if branch.returncode != 0:
+            if branch.returncode == 0:
+                branchStr = branch.stdout.replace("\n", "")
                 if args.verbose:
-                    print("reset to branch "+branch.stdout)
+                    print("reset to branch "+branchStr)
 
                 cmd = []
                 cmd.append("git")
                 cmd.append("reset")
                 cmd.append("--hard")
-                cmd.append(branch.stdout)
+                cmd.append(branchStr)
                 res = runProcess(cmd)
                 if res.returncode != 0:
+                    print("error during git reset")
                     stats.errors += 1
 
                 if args.verbose:
@@ -204,8 +207,10 @@ def main():
                 cmd.append("-dfx")
                 res = runProcess(cmd)
                 if res.returncode != 0:
+                    print("error during git clean")
                     stats.errors += 1
             else:
+                print("error during rev-parse")
                 stats.errors += 1
 
             os.chdir(originalWorkingDirectory)
@@ -227,6 +232,7 @@ def main():
             cmd.append(repo["directory"])
             res = runProcess(cmd)
             if res.returncode != 0:
+                print("error during git clone")
                 stats.errors += 1
             else:
                 stats.createdRepos += 1
