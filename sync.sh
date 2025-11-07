@@ -1,3 +1,4 @@
+#!/bin/sh
 cd github_mirror
 python ../repotoolnext.py ../../personalLinks/local_github_backup_list.json
 cd ..
