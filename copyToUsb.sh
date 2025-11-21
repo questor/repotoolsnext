@@ -17,6 +17,7 @@ runRSync () {
 runRSync "UnrealEngine/" "$1/UnrealEngine"
 runRSync "github_mirror/" "$1/github_mirror"
 runRSync "aseprite/" "$1/aseprite"
+runRSync "blender-release-src/" "$1/blender-release-src"
 
 # the following is expensive....
 #tar -Ipixz -cvf "$1/fuchsia.tar.xz" "fuchsia/"

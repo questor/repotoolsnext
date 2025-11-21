@@ -23,3 +23,9 @@ git submodule update --depth 1
 git clean -dfx
 cd ..
 
+cd blender-release-src
+git fetch --depth 1
+git reset --hard "$(git rev-parse --abbrev-ref --symbolic-full-name '@{u}')"
+git clean -dfx
+cd ..
+
