@@ -34,6 +34,10 @@ class LoadArgsFromFile(argparse.Action):
             # parse arguments in the file and store them in the target namespace
             parser.parse_args(f.read().split(), namespace)
 
+def printToSameLine(text):
+    sys.stdout.write(u"\u001b[1000D"+text)
+    sys.stdout.flush()
+
 def main():
     parser = argparse.ArgumentParser(description='tool to sync git repos without history')
 
@@ -82,6 +86,7 @@ def main():
                 text += f"- already in list: {self.alreadyInListRepos}\n"
                 text += f"- errors: {self.errors}\n"
                 return text
+        print("scanning folder for repos")
         stats = ScanStats()
         foundSomethingNew = False
         for subdir, dirs, files in os.walk(originalWorkingDirectory):
@@ -96,18 +101,19 @@ def main():
                         if args.verbose:
                             print("check if directory is already in list")
 
+                        printToSameLine("scanning "+localPath)
+
                         localPath = localPath + os.sep
 
                         alreadyInList = False
                         for item in repos:
                             #print(item)
                             if item['directory'] == localPath:
-                                print("already in list: "+localPath)
                                 alreadyInList = True
                                 stats.alreadyInListRepos += 1
 
                         if alreadyInList == False:
-                            print("NEW REPO: "+localPath)
+                            print("\nNEW REPO: "+localPath)
                             if args.verbose:
                                 print("change to path :"+completePath[:len(completePath)-len("/.git")])
                             os.chdir(completePath[:len(completePath)-len("/.git")])
@@ -135,6 +141,8 @@ def main():
 
         os.chdir(originalWorkingDirectory)
 
+        print("                                                                     ")
+
         if foundSomethingNew == True:
             with open(args.repo_list_json, 'w', encoding='utf-8') as f:
                 json.dump(repos, f, ensure_ascii=False, indent=3, sort_keys=True)
@@ -157,10 +165,14 @@ def main():
             return text
     stats = UpdateStats()
 
+    print("searching for updates of the repos")
     repoCounter = 0
     for repo in repos:
         stats.checkedRepos += 1
         if checkDirectory(repo["directory"]) == True:
+
+            printToSameLine("checking "+repo["directory"])
+
             os.chdir(repo["directory"])
             if args.verbose:
                 print("change to "+repo["directory"]+" and fetch")
@@ -242,6 +254,9 @@ def main():
             if args.debug:
                 print("DEBUG MODE, abort after 3 repos")
                 exit(0)
+
+    print("                                                                     ")
+
     print(stats)
 
 if __name__ == "__main__":
